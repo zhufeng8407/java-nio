@@ -4,7 +4,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.FileChannel.MapMode;
+import java.nio.charset.Charset;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 /**
  * 一、通道（Channel）：用于源节点与目标节点的连接。在 Java NIO 中负责缓冲区中数据的传输。Channel 本身不存储数据，因此需要配合缓冲区进行传输。
@@ -48,7 +53,10 @@ import java.nio.channels.FileChannel;
 public class TestChannel {
 
 	public static void main(String[] args) throws IOException {
-		testChannel1();
+//		testChannel1();
+//		testChannelCopy();
+		
+		testCharset();
 	}
 	
 	/**
@@ -78,9 +86,41 @@ public class TestChannel {
 	
 	/**
 	 * 使用直接缓冲完成文件的复制
+	 * @throws IOException 
 	 */
-	private static void testMappedByteBuffer() {
+	private static void testMappedByteBuffer() throws IOException {
+long start = System.currentTimeMillis();
 		
+		FileChannel inChannel = FileChannel.open(Paths.get("d:/1.mkv"), StandardOpenOption.READ);
+		FileChannel outChannel = FileChannel.open(Paths.get("d:/2.mkv"), StandardOpenOption.WRITE, StandardOpenOption.READ, StandardOpenOption.CREATE);
+		
+		//内存映射文件
+		MappedByteBuffer inMappedBuf = inChannel.map(MapMode.READ_ONLY, 0, inChannel.size());
+		MappedByteBuffer outMappedBuf = outChannel.map(MapMode.READ_WRITE, 0, inChannel.size());
+		
+		//直接对缓冲区进行数据的读写操作
+		byte[] dst = new byte[inMappedBuf.limit()];
+		inMappedBuf.get(dst);
+		outMappedBuf.put(dst);
+		
+		inChannel.close();
+		outChannel.close();
+		
+		long end = System.currentTimeMillis();
+		System.out.println("耗费时间为：" + (end - start));
 	}
 
+	//通道之间的数据传输(直接缓冲区)
+	private static void testChannelCopy() throws IOException {
+		FileChannel inChannel = FileChannel.open(Paths.get("/Users/zhufeng/Downloads/study/测试环境二维码.png"), StandardOpenOption.READ);
+		FileChannel outChannel = FileChannel.open(Paths.get("/Users/zhufeng/Downloads/study/测试环境二维码3.png"), 
+				StandardOpenOption.WRITE, StandardOpenOption.CREATE);
+		inChannel.transferTo(0, inChannel.size(), outChannel);
+		inChannel.close();
+		outChannel.close();
+	}
+	
+	private static void testCharset() {
+		Charset.availableCharsets().entrySet().stream().forEach(System.out::println);
+	}
 }
